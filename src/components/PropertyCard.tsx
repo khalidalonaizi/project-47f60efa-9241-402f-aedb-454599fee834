@@ -1,0 +1,111 @@
+import { Badge } from "@/components/ui/badge";
+import { Bath, Bed, Heart, MapPin, Maximize } from "lucide-react";
+import { useState } from "react";
+
+interface PropertyCardProps {
+  id: number;
+  title: string;
+  price: number;
+  priceType: "sale" | "rent";
+  location: string;
+  city: string;
+  bedrooms: number;
+  bathrooms: number;
+  area: number;
+  image: string;
+  isNew?: boolean;
+  isFeatured?: boolean;
+}
+
+const PropertyCard = ({
+  title,
+  price,
+  priceType,
+  location,
+  city,
+  bedrooms,
+  bathrooms,
+  area,
+  image,
+  isNew,
+  isFeatured,
+}: PropertyCardProps) => {
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("ar-SA").format(price);
+  };
+
+  return (
+    <div className="group bg-card rounded-2xl overflow-hidden card-shadow hover:card-shadow-hover transition-all duration-300">
+      {/* Image */}
+      <div className="relative h-52 overflow-hidden">
+        <img
+          src={image}
+          alt={title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+        />
+        
+        {/* Badges */}
+        <div className="absolute top-3 right-3 flex gap-2">
+          {isNew && (
+            <Badge className="bg-success text-success-foreground">جديد</Badge>
+          )}
+          {isFeatured && (
+            <Badge className="bg-gold text-foreground">مميز</Badge>
+          )}
+        </div>
+
+        {/* Favorite Button */}
+        <button
+          onClick={() => setIsFavorite(!isFavorite)}
+          className="absolute top-3 left-3 w-10 h-10 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center hover:bg-card transition-colors"
+        >
+          <Heart
+            className={`w-5 h-5 transition-colors ${
+              isFavorite ? "fill-destructive text-destructive" : "text-muted-foreground"
+            }`}
+          />
+        </button>
+
+        {/* Price Tag */}
+        <div className="absolute bottom-3 right-3 bg-primary text-primary-foreground px-4 py-2 rounded-lg font-bold">
+          {formatPrice(price)} ر.س
+          {priceType === "rent" && <span className="text-sm font-normal"> / شهري</span>}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-4">
+        <h3 className="text-lg font-bold text-foreground mb-2 line-clamp-1 group-hover:text-primary transition-colors">
+          {title}
+        </h3>
+
+        <div className="flex items-center gap-1 text-muted-foreground mb-4">
+          <MapPin className="w-4 h-4" />
+          <span className="text-sm">
+            {location}، {city}
+          </span>
+        </div>
+
+        {/* Specs */}
+        <div className="flex items-center justify-between pt-4 border-t border-border">
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <Bed className="w-4 h-4" />
+            <span className="text-sm">{bedrooms} غرف</span>
+          </div>
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <Bath className="w-4 h-4" />
+            <span className="text-sm">{bathrooms} حمام</span>
+          </div>
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <Maximize className="w-4 h-4" />
+            <span className="text-sm">{area} م²</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PropertyCard;
