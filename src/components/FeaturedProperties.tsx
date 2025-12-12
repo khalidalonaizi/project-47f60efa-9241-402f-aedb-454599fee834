@@ -1,89 +1,72 @@
 import PropertyCard from "./PropertyCard";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Link } from "react-router-dom";
 
-const properties = [
-  {
-    id: "1",
-    title: "فيلا فاخرة في حي الملقا",
-    price: 3500000,
-    priceType: "sale" as const,
-    location: "حي الملقا",
-    city: "الرياض",
-    bedrooms: 5,
-    bathrooms: 4,
-    area: 450,
-    image: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&h=600&fit=crop",
-    isNew: true,
-    isFeatured: true,
-  },
-  {
-    id: "2",
-    title: "شقة حديثة في جدة",
-    price: 1200000,
-    priceType: "sale" as const,
-    location: "حي الروضة",
-    city: "جدة",
-    bedrooms: 3,
-    bathrooms: 2,
-    area: 180,
-    image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop",
-    isFeatured: true,
-  },
-  {
-    id: "3",
-    title: "شقة للإيجار في الدمام",
-    price: 4500,
-    priceType: "rent" as const,
-    location: "حي الفيصلية",
-    city: "الدمام",
-    bedrooms: 2,
-    bathrooms: 2,
-    area: 120,
-    image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop",
-    isNew: true,
-  },
-  {
-    id: "4",
-    title: "فيلا دوبلكس في الخبر",
-    price: 2800000,
-    priceType: "sale" as const,
-    location: "حي اليرموك",
-    city: "الخبر",
-    bedrooms: 6,
-    bathrooms: 5,
-    area: 550,
-    image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop",
-  },
-  {
-    id: "5",
-    title: "شقة فاخرة مطلة على البحر",
-    price: 8000,
-    priceType: "rent" as const,
-    location: "كورنيش جدة",
-    city: "جدة",
-    bedrooms: 4,
-    bathrooms: 3,
-    area: 250,
-    image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&h=600&fit=crop",
-    isFeatured: true,
-  },
-  {
-    id: "6",
-    title: "مجمع سكني جديد",
-    price: 1800000,
-    priceType: "sale" as const,
-    location: "حي النرجس",
-    city: "الرياض",
-    bedrooms: 4,
-    bathrooms: 3,
-    area: 300,
-    image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&h=600&fit=crop",
-    isNew: true,
-  },
-];
+interface Property {
+  id: string;
+  title: string;
+  price: number;
+  listing_type: string;
+  neighborhood: string | null;
+  city: string;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  area: number | null;
+  images: string[] | null;
+  is_featured: boolean | null;
+  created_at: string;
+}
 
 const FeaturedProperties = () => {
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProperties = async () => {
+      const { data, error } = await supabase
+        .from("properties")
+        .select("*")
+        .eq("is_approved", true)
+        .order("created_at", { ascending: false })
+        .limit(6);
+
+      if (!error && data) {
+        setProperties(data);
+      }
+      setLoading(false);
+    };
+
+    fetchProperties();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-16 bg-background">
+        <div className="container flex justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </section>
+    );
+  }
+
+  if (properties.length === 0) {
+    return (
+      <section className="py-16 bg-background">
+        <div className="container text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
+            عقارات مميزة
+          </h2>
+          <p className="text-muted-foreground">
+            لا توجد عقارات متاحة حالياً
+          </p>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-16 bg-background">
       <div className="container">
@@ -96,10 +79,12 @@ const FeaturedProperties = () => {
               اكتشف أفضل العقارات المتاحة في المملكة
             </p>
           </div>
-          <Button variant="outline" className="hidden md:flex gap-2">
-            عرض الكل
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
+          <Link to="/search">
+            <Button variant="outline" className="hidden md:flex gap-2">
+              عرض الكل
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -109,16 +94,31 @@ const FeaturedProperties = () => {
               className="animate-fade-up"
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              <PropertyCard {...property} />
+              <PropertyCard
+                id={property.id}
+                title={property.title}
+                price={property.price}
+                priceType={property.listing_type === "rent" ? "rent" : "sale"}
+                location={property.neighborhood || ""}
+                city={property.city}
+                bedrooms={property.bedrooms || 0}
+                bathrooms={property.bathrooms || 0}
+                area={property.area || 0}
+                image={property.images?.[0] || "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop"}
+                isNew={new Date(property.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)}
+                isFeatured={property.is_featured || false}
+              />
             </div>
           ))}
         </div>
 
         <div className="flex justify-center mt-8 md:hidden">
-          <Button variant="outline" className="gap-2">
-            عرض الكل
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
+          <Link to="/search">
+            <Button variant="outline" className="gap-2">
+              عرض الكل
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+          </Link>
         </div>
       </div>
     </section>
