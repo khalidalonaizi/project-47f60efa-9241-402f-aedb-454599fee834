@@ -14,8 +14,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PropertyCard from "@/components/PropertyCard";
+import MapSearch from "@/components/MapSearch";
+import PropertyComparison from "@/components/PropertyComparison";
+import { usePropertyComparison } from "@/hooks/usePropertyComparison";
 import { supabase } from "@/integrations/supabase/client";
-import { Filter, Grid3X3, List, MapPin, RotateCcw, Search, SlidersHorizontal, Loader2 } from "lucide-react";
+import { Filter, Grid3X3, List, MapPin, RotateCcw, Search, SlidersHorizontal, Loader2, Map } from "lucide-react";
 
 interface Property {
   id: string;
@@ -46,7 +49,9 @@ const SearchPage = () => {
   const [propertyType, setPropertyType] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(true);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list" | "map">("grid");
+  
+  const { selectedProperties, toggleProperty, removeProperty, clearAll, isSelected } = usePropertyComparison();
 
   const cities = [
     "الرياض",
@@ -370,6 +375,7 @@ const SearchPage = () => {
                   variant={viewMode === "grid" ? "secondary" : "ghost"}
                   size="icon"
                   onClick={() => setViewMode("grid")}
+                  title="عرض شبكي"
                 >
                   <Grid3X3 className="w-4 h-4" />
                 </Button>
@@ -377,17 +383,28 @@ const SearchPage = () => {
                   variant={viewMode === "list" ? "secondary" : "ghost"}
                   size="icon"
                   onClick={() => setViewMode("list")}
+                  title="عرض قائمة"
                 >
                   <List className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "map" ? "secondary" : "ghost"}
+                  size="icon"
+                  onClick={() => setViewMode("map")}
+                  title="عرض خريطة"
+                >
+                  <Map className="w-4 h-4" />
                 </Button>
               </div>
             </div>
 
-            {/* Results Grid */}
+            {/* Results Grid/List/Map */}
             {loading ? (
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
+            ) : viewMode === "map" ? (
+              <MapSearch onClose={() => setViewMode("grid")} />
             ) : filteredProperties.length > 0 ? (
               <div
                 className={
@@ -410,6 +427,8 @@ const SearchPage = () => {
                     area={property.area || 0}
                     image={property.images?.[0] || "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800"}
                     isFeatured={property.is_featured || false}
+                    isCompareSelected={isSelected(property.id)}
+                    onCompareToggle={toggleProperty}
                   />
                 ))}
               </div>
@@ -432,6 +451,13 @@ const SearchPage = () => {
           </main>
         </div>
       </div>
+
+      {/* Property Comparison */}
+      <PropertyComparison 
+        selectedProperties={selectedProperties}
+        onRemoveProperty={removeProperty}
+        onClearAll={clearAll}
+      />
 
       <Footer />
     </div>

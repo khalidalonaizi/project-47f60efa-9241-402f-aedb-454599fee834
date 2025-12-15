@@ -474,10 +474,20 @@ const Financing = () => {
       {/* Hero Section */}
       <div className="bg-primary/5 border-b border-border">
         <div className="container py-12">
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">التمويل العقاري</h1>
-          <p className="text-muted-foreground text-lg">
-            احسب تمويلك العقاري بناءً على راتبك والتزاماتك وقارن بين أفضل عروض البنوك
-          </p>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">التمويل العقاري</h1>
+              <p className="text-muted-foreground text-lg">
+                احسب تمويلك العقاري بناءً على راتبك والتزاماتك وقارن بين أفضل عروض البنوك
+              </p>
+            </div>
+            {user && (
+              <Button variant="outline" onClick={() => navigate('/saved-reports')} className="gap-2">
+                <FolderOpen className="w-4 h-4" />
+                التقارير المحفوظة
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -831,11 +841,50 @@ const Financing = () => {
                   </CardContent>
                 </Card>
 
-                {/* Print Button */}
-                <Button onClick={handlePrint} variant="outline" className="w-full">
-                  <Printer className="w-4 h-4 ml-2" />
-                  طباعة التقرير (PDF)
-                </Button>
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <Button onClick={handlePrint} variant="outline" className="flex-1">
+                    <Printer className="w-4 h-4 ml-2" />
+                    طباعة التقرير
+                  </Button>
+                  
+                  <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="default" className="flex-1" disabled={!user}>
+                        <Save className="w-4 h-4 ml-2" />
+                        حفظ التقرير
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>حفظ التقرير</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 pt-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="report-name">اسم التقرير</Label>
+                          <Input
+                            id="report-name"
+                            placeholder="مثال: تمويل فيلا الرياض"
+                            value={reportName}
+                            onChange={(e) => setReportName(e.target.value)}
+                          />
+                        </div>
+                        <Button onClick={handleSaveReport} disabled={saving} className="w-full">
+                          {saving ? "جاري الحفظ..." : "حفظ"}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+                
+                {!user && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    <Button variant="link" className="p-0 h-auto" onClick={() => navigate('/auth')}>
+                      سجل الدخول
+                    </Button>
+                    {" "}لحفظ التقارير
+                  </p>
+                )}
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Card>
