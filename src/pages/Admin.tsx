@@ -179,6 +179,9 @@ const Admin = () => {
   };
 
   const handleApprove = async (id: string) => {
+    // Get property title before updating
+    const property = properties.find(p => p.id === id);
+    
     const { error } = await supabase
       .from('properties')
       .update({ is_approved: true, status: 'approved' })
@@ -195,11 +198,30 @@ const Admin = () => {
         title: 'تم القبول',
         description: 'تم قبول الإعلان ونشره',
       });
+      
+      // Send email notification
+      if (property) {
+        try {
+          await supabase.functions.invoke('send-status-notification', {
+            body: {
+              propertyId: id,
+              newStatus: 'approved',
+              propertyTitle: property.title,
+            },
+          });
+        } catch (notifError) {
+          console.error('Error sending notification:', notifError);
+        }
+      }
+      
       fetchData();
     }
   };
 
   const handleReject = async (id: string) => {
+    // Get property title before updating
+    const property = properties.find(p => p.id === id);
+    
     const { error } = await supabase
       .from('properties')
       .update({ is_approved: false, status: 'rejected' })
@@ -216,6 +238,22 @@ const Admin = () => {
         title: 'تم الرفض',
         description: 'تم رفض الإعلان',
       });
+      
+      // Send email notification
+      if (property) {
+        try {
+          await supabase.functions.invoke('send-status-notification', {
+            body: {
+              propertyId: id,
+              newStatus: 'rejected',
+              propertyTitle: property.title,
+            },
+          });
+        } catch (notifError) {
+          console.error('Error sending notification:', notifError);
+        }
+      }
+      
       fetchData();
     }
   };
