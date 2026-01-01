@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -11,9 +11,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
+import FinancingOfferCard from "@/components/FinancingOfferCard";
+import ContactButton from "@/components/ContactButton";
 import { 
   Calculator, 
   Banknote, 
@@ -32,49 +35,110 @@ import {
   Printer,
   Car,
   Save,
-  FolderOpen
+  FolderOpen,
+  Plus,
+  Landmark,
+  BadgeDollarSign,
+  Loader2
 } from "lucide-react";
 
-const banks = [
+interface FinancingOffer {
+  id: string;
+  company_name: string;
+  company_type: string;
+  logo_url?: string;
+  interest_rate: number;
+  max_tenure: number;
+  max_amount: number;
+  min_salary: number;
+  max_dti: number;
+  features: string[];
+  phone?: string;
+  email?: string;
+  website?: string;
+  description?: string;
+  is_featured?: boolean;
+  is_approved?: boolean;
+}
+
+const defaultBanks: FinancingOffer[] = [
   {
-    name: "البنك الأهلي السعودي",
-    logo: "🏦",
-    rate: 4.5,
-    maxTenure: 25,
-    maxAmount: 5000000,
-    minSalary: 5000,
-    maxDti: 65,
+    id: "1",
+    company_name: "البنك الأهلي السعودي",
+    company_type: "bank",
+    interest_rate: 4.5,
+    max_tenure: 25,
+    max_amount: 5000000,
+    min_salary: 5000,
+    max_dti: 65,
     features: ["تمويل يصل إلى 90%", "فترة سداد مرنة", "إعفاء من الرسوم الإدارية"],
+    phone: "920000000",
+    website: "https://www.alahli.com",
   },
   {
-    name: "مصرف الراجحي",
-    logo: "🏛️",
-    rate: 4.2,
-    maxTenure: 30,
-    maxAmount: 7000000,
-    minSalary: 4000,
-    maxDti: 60,
+    id: "2",
+    company_name: "مصرف الراجحي",
+    company_type: "bank",
+    interest_rate: 4.2,
+    max_tenure: 30,
+    max_amount: 7000000,
+    min_salary: 4000,
+    max_dti: 60,
     features: ["متوافق مع الشريعة", "موافقة سريعة", "تأمين مجاني"],
+    phone: "920003344",
+    website: "https://www.alrajhibank.com.sa",
   },
   {
-    name: "بنك الرياض",
-    logo: "🏢",
-    rate: 4.8,
-    maxTenure: 25,
-    maxAmount: 4000000,
-    minSalary: 6000,
-    maxDti: 55,
+    id: "3",
+    company_name: "بنك الرياض",
+    company_type: "bank",
+    interest_rate: 4.8,
+    max_tenure: 25,
+    max_amount: 4000000,
+    min_salary: 6000,
+    max_dti: 55,
     features: ["أقساط ثابتة", "خدمة عملاء متميزة", "تحويل الراتب اختياري"],
+    phone: "920002470",
+    website: "https://www.riyadbank.com",
   },
   {
-    name: "البنك السعودي الفرنسي",
-    logo: "🏤",
-    rate: 4.6,
-    maxTenure: 20,
-    maxAmount: 3500000,
-    minSalary: 5500,
-    maxDti: 50,
+    id: "4",
+    company_name: "البنك السعودي الفرنسي",
+    company_type: "bank",
+    interest_rate: 4.6,
+    max_tenure: 20,
+    max_amount: 3500000,
+    min_salary: 5500,
+    max_dti: 50,
     features: ["معدل ربح تنافسي", "إجراءات سريعة", "تمويل بدون كفيل"],
+    phone: "920000466",
+    website: "https://www.alfransi.com.sa",
+  },
+  {
+    id: "5",
+    company_name: "شركة دار التمليك",
+    company_type: "financing_company",
+    interest_rate: 5.0,
+    max_tenure: 20,
+    max_amount: 3000000,
+    min_salary: 4500,
+    max_dti: 60,
+    features: ["حلول تمويلية متنوعة", "تمويل العقار تحت الإنشاء", "خدمة متكاملة"],
+    phone: "920000606",
+    website: "https://www.dantamlik.com",
+  },
+  {
+    id: "6",
+    company_name: "شركة بداية للتمويل",
+    company_type: "financing_company",
+    interest_rate: 4.9,
+    max_tenure: 25,
+    max_amount: 4000000,
+    min_salary: 5000,
+    max_dti: 55,
+    features: ["تمويل سكني متوافق مع الشريعة", "برامج دعم سكني", "استشارات مجانية"],
+    phone: "920002434",
+    website: "https://www.bidayahome.com",
   },
 ];
 
@@ -85,6 +149,28 @@ const formatPrice = (price: number) => {
 const Financing = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  // Financing offers
+  const [offers, setOffers] = useState<FinancingOffer[]>(defaultBanks);
+  const [loadingOffers, setLoadingOffers] = useState(true);
+
+  // Add offer dialog
+  const [addOfferOpen, setAddOfferOpen] = useState(false);
+  const [newOffer, setNewOffer] = useState({
+    company_name: "",
+    company_type: "financing_company" as "bank" | "financing_company",
+    interest_rate: 5,
+    max_tenure: 20,
+    max_amount: 3000000,
+    min_salary: 5000,
+    max_dti: 60,
+    features: [""],
+    phone: "",
+    email: "",
+    website: "",
+    description: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
   
   // Property details
   const [propertyPrice, setPropertyPrice] = useState(1000000);
@@ -119,6 +205,29 @@ const Financing = () => {
 
   // Print ref
   const printRef = useRef<HTMLDivElement>(null);
+
+  // Fetch financing offers from database
+  useEffect(() => {
+    const fetchOffers = async () => {
+      const { data, error } = await supabase
+        .from('financing_offers')
+        .select('*')
+        .eq('is_approved', true)
+        .order('is_featured', { ascending: false })
+        .order('interest_rate', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        const dbOffers = data.map(offer => ({
+          ...offer,
+          features: offer.features || [],
+        })) as FinancingOffer[];
+        setOffers([...dbOffers, ...defaultBanks]);
+      }
+      setLoadingOffers(false);
+    };
+
+    fetchOffers();
+  }, []);
 
   const loanAmount = propertyPrice - downPayment;
   const monthlyRate = interestRate / 100 / 12;
@@ -156,7 +265,7 @@ const Financing = () => {
   // Customer calculations
   const totalIncome = salary + otherIncome;
   const totalObligationsWithLoan = calculatedObligations + monthlyPayment;
-  const dti = (totalObligationsWithLoan / totalIncome) * 100; // Debt-to-Income ratio
+  const dti = (totalObligationsWithLoan / totalIncome) * 100;
   const remainingIncome = totalIncome - totalObligationsWithLoan;
   const maxRetirementAge = sector === 'military' ? 55 : 60;
   const maxTenureByAge = Math.max(5, maxRetirementAge - age);
@@ -200,12 +309,80 @@ const Financing = () => {
   }, [salary, dti, tenure, maxTenureByAge, downPayment, propertyPrice, remainingIncome]);
 
   const isEligible = eligibilityChecks.every(check => check.passed);
-  const eligibleBanks = banks.filter(bank => 
-    salary >= bank.minSalary && 
-    dti <= bank.maxDti && 
-    tenure <= bank.maxTenure &&
-    loanAmount <= bank.maxAmount
+  const eligibleOffers = offers.filter(offer => 
+    salary >= offer.min_salary && 
+    dti <= offer.max_dti && 
+    tenure <= offer.max_tenure &&
+    loanAmount <= offer.max_amount
   );
+
+  // Handle add offer
+  const handleAddOffer = async () => {
+    if (!user) {
+      toast({
+        title: "يجب تسجيل الدخول",
+        description: "يرجى تسجيل الدخول لإضافة عرض تمويلي",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!newOffer.company_name.trim()) {
+      toast({
+        title: "خطأ",
+        description: "يرجى إدخال اسم الشركة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    const { error } = await supabase.from('financing_offers').insert({
+      user_id: user.id,
+      company_name: newOffer.company_name,
+      company_type: newOffer.company_type,
+      interest_rate: newOffer.interest_rate,
+      max_tenure: newOffer.max_tenure,
+      max_amount: newOffer.max_amount,
+      min_salary: newOffer.min_salary,
+      max_dti: newOffer.max_dti,
+      features: newOffer.features.filter(f => f.trim()),
+      phone: newOffer.phone || null,
+      email: newOffer.email || null,
+      website: newOffer.website || null,
+      description: newOffer.description || null,
+    });
+
+    setSubmitting(false);
+
+    if (error) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء إضافة العرض",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "تم الإرسال",
+        description: "تم إرسال العرض للمراجعة وسيظهر بعد الموافقة عليه",
+      });
+      setAddOfferOpen(false);
+      setNewOffer({
+        company_name: "",
+        company_type: "financing_company",
+        interest_rate: 5,
+        max_tenure: 20,
+        max_amount: 3000000,
+        min_salary: 5000,
+        max_dti: 60,
+        features: [""],
+        phone: "",
+        email: "",
+        website: "",
+        description: "",
+      });
+    }
+  };
 
   // Print function
   const handlePrint = () => {
@@ -239,7 +416,7 @@ const Financing = () => {
           }
           .header { 
             text-align: center; 
-            border-bottom: 3px solid #3b82f6; 
+            border-bottom: 3px solid #14B8A6; 
             padding-bottom: 20px; 
             margin-bottom: 30px; 
           }
@@ -247,7 +424,7 @@ const Financing = () => {
           .header p { color: #6b7280; }
           .section { margin-bottom: 25px; }
           .section-title { 
-            background: #3b82f6; 
+            background: #14B8A6; 
             color: white; 
             padding: 10px 15px; 
             border-radius: 5px;
@@ -265,13 +442,13 @@ const Financing = () => {
           .item-label { color: #6b7280; }
           .item-value { font-weight: bold; color: #1f2937; }
           .highlight { 
-            background: #dbeafe; 
+            background: #ccfbf1; 
             padding: 20px; 
             border-radius: 10px; 
             text-align: center;
             margin: 20px 0;
           }
-          .highlight-value { font-size: 32px; color: #3b82f6; font-weight: bold; }
+          .highlight-value { font-size: 32px; color: #14B8A6; font-weight: bold; }
           .highlight-label { color: #6b7280; margin-top: 5px; }
           .eligibility { padding: 15px; border-radius: 5px; margin-top: 20px; }
           .eligible { background: #dcfce7; border: 2px solid #22c55e; }
@@ -377,13 +554,13 @@ const Financing = () => {
         <div class="eligibility ${isEligible ? 'eligible' : 'not-eligible'}">
           <strong style="font-size: 18px;">${isEligible ? '✓ مؤهل للتمويل' : '✗ غير مؤهل حالياً'}</strong>
           <p style="margin-top: 10px; color: #6b7280;">
-            ${isEligible ? 'متوافق مع ' + eligibleBanks.length + ' بنك' : 'يرجى مراجعة المتطلبات'}
+            ${isEligible ? 'متوافق مع ' + eligibleOffers.length + ' جهة تمويل' : 'يرجى مراجعة المتطلبات'}
           </p>
         </div>
 
         <div class="footer">
           <p>هذا التقرير للأغراض الإرشادية فقط ولا يمثل عرضاً رسمياً للتمويل</p>
-          <p>يرجى التواصل مع البنك للحصول على عرض رسمي</p>
+          <p>يرجى التواصل مع جهة التمويل للحصول على عرض رسمي</p>
         </div>
       </body>
       </html>
@@ -436,7 +613,7 @@ const Financing = () => {
       age,
       sector,
       is_eligible: isEligible,
-      eligible_banks_count: eligibleBanks.length,
+      eligible_banks_count: eligibleOffers.length,
       has_personal_loan: hasPersonalLoan,
       personal_loan_amount: personalLoanAmount,
       has_car_loan: hasCarLoan,
@@ -463,10 +640,6 @@ const Financing = () => {
     }
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("ar-SA").format(Math.round(price));
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -478,25 +651,31 @@ const Financing = () => {
             <div>
               <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">التمويل العقاري</h1>
               <p className="text-muted-foreground text-lg">
-                احسب تمويلك العقاري بناءً على راتبك والتزاماتك وقارن بين أفضل عروض البنوك
+                احسب تمويلك العقاري بناءً على راتبك والتزاماتك وقارن بين أفضل عروض البنوك وشركات التمويل العقاري
               </p>
             </div>
-            {user && (
-              <Button variant="outline" onClick={() => navigate('/saved-reports')} className="gap-2">
-                <FolderOpen className="w-4 h-4" />
-                التقارير المحفوظة
-              </Button>
-            )}
+            <div className="flex gap-3">
+              {user && (
+                <Button variant="outline" onClick={() => navigate('/saved-reports')} className="gap-2">
+                  <FolderOpen className="w-4 h-4" />
+                  التقارير المحفوظة
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       <div className="container py-12">
         <Tabs defaultValue="calculator" className="space-y-8">
-          <TabsList className="grid w-full max-w-lg grid-cols-3">
+          <TabsList className="grid w-full max-w-2xl grid-cols-4">
             <TabsTrigger value="calculator">حاسبة التمويل</TabsTrigger>
             <TabsTrigger value="eligibility">الأهلية</TabsTrigger>
-            <TabsTrigger value="banks">عروض البنوك</TabsTrigger>
+            <TabsTrigger value="offers">عروض التمويل</TabsTrigger>
+            <TabsTrigger value="add-offer">
+              <Plus className="w-4 h-4 ml-1" />
+              أضف عرض
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="calculator">
@@ -945,7 +1124,7 @@ const Financing = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>نسبة الاستقطاع (DTI)</span>
-                        <span className={dti > 65 ? "text-destructive" : "text-success"}>
+                        <span className={dti > 65 ? "text-destructive" : "text-green-600"}>
                           {dti.toFixed(1)}%
                         </span>
                       </div>
@@ -958,7 +1137,7 @@ const Financing = () => {
                     <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                       <div>
                         <p className="text-sm text-muted-foreground">إجمالي الدخل</p>
-                        <p className="font-bold text-success">{formatPrice(totalIncome)} ر.س</p>
+                        <p className="font-bold text-green-600">{formatPrice(totalIncome)} ر.س</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">إجمالي الالتزامات</p>
@@ -966,7 +1145,7 @@ const Financing = () => {
                       </div>
                       <div className="col-span-2">
                         <p className="text-sm text-muted-foreground">الدخل المتبقي</p>
-                        <p className={`font-bold text-lg ${remainingIncome >= 2000 ? "text-success" : "text-destructive"}`}>
+                        <p className={`font-bold text-lg ${remainingIncome >= 2000 ? "text-green-600" : "text-destructive"}`}>
                           {formatPrice(remainingIncome)} ر.س
                         </p>
                       </div>
@@ -975,11 +1154,11 @@ const Financing = () => {
                 </Card>
 
                 {/* Eligibility Status */}
-                <Card className={isEligible ? "border-success" : "border-destructive"}>
+                <Card className={isEligible ? "border-green-500" : "border-destructive"}>
                   <CardContent className="p-6">
                     <div className="flex items-center gap-3 mb-4">
                       {isEligible ? (
-                        <CheckCircle className="w-8 h-8 text-success" />
+                        <CheckCircle className="w-8 h-8 text-green-500" />
                       ) : (
                         <AlertTriangle className="w-8 h-8 text-destructive" />
                       )}
@@ -989,7 +1168,7 @@ const Financing = () => {
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {isEligible 
-                            ? `متوافق مع ${eligibleBanks.length} بنك`
+                            ? `متوافق مع ${eligibleOffers.length} جهة تمويل`
                             : "راجع المتطلبات أدناه"
                           }
                         </p>
@@ -999,7 +1178,7 @@ const Financing = () => {
                       {eligibilityChecks.map((check, idx) => (
                         <div key={idx} className="flex items-center gap-2 text-sm">
                           {check.passed ? (
-                            <CheckCircle className="w-4 h-4 text-success" />
+                            <CheckCircle className="w-4 h-4 text-green-500" />
                           ) : (
                             <AlertTriangle className="w-4 h-4 text-destructive" />
                           )}
@@ -1044,7 +1223,7 @@ const Financing = () => {
                     <div>
                       <p className="font-medium">الحد الأدنى للراتب</p>
                       <p className="text-sm text-muted-foreground">
-                        يختلف حسب البنك (4,000 - 6,000 ر.س)
+                        يختلف حسب الجهة (4,000 - 6,000 ر.س)
                       </p>
                     </div>
                   </div>
@@ -1106,7 +1285,7 @@ const Financing = () => {
                     "سجل الأسرة (للمتزوجين)",
                   ].map((doc, idx) => (
                     <div key={idx} className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-success shrink-0" />
+                      <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
                       <span className="text-sm">{doc}</span>
                     </div>
                   ))}
@@ -1115,86 +1294,218 @@ const Financing = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="banks">
-            <div className="mb-6">
-              {eligibleBanks.length > 0 ? (
-                <Badge variant="secondary" className="mb-4">
-                  {eligibleBanks.length} بنك متوافق مع بياناتك المالية
+          <TabsContent value="offers">
+            <div className="mb-6 flex flex-wrap items-center gap-4">
+              {eligibleOffers.length > 0 ? (
+                <Badge variant="secondary" className="bg-green-500/10 text-green-600 hover:bg-green-500/20">
+                  {eligibleOffers.length} جهة تمويل متوافقة مع بياناتك المالية
                 </Badge>
               ) : (
-                <Badge variant="destructive" className="mb-4">
-                  لا توجد بنوك متوافقة - راجع بياناتك المالية
+                <Badge variant="destructive">
+                  لا توجد جهات متوافقة - راجع بياناتك المالية
                 </Badge>
               )}
+              
+              <div className="flex gap-2">
+                <Badge variant="outline" className="gap-1">
+                  <Landmark className="w-3 h-3" />
+                  بنوك
+                </Badge>
+                <Badge variant="outline" className="gap-1">
+                  <BadgeDollarSign className="w-3 h-3" />
+                  شركات تمويل
+                </Badge>
+              </div>
             </div>
             
-            <div className="grid gap-6 md:grid-cols-2">
-              {banks.map((bank) => {
-                const isCompatible = eligibleBanks.includes(bank);
-                return (
-                  <Card 
-                    key={bank.name} 
-                    className={`hover:shadow-lg transition-shadow ${!isCompatible ? 'opacity-60' : ''}`}
-                  >
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center text-3xl">
-                            {bank.logo}
-                          </div>
-                          <div>
-                            <CardTitle className="text-lg">{bank.name}</CardTitle>
-                            <CardDescription>معدل ربح يبدأ من {bank.rate}%</CardDescription>
+            {loadingOffers ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2">
+                {offers.map((offer) => {
+                  const isCompatible = eligibleOffers.some(eo => eo.id === offer.id);
+                  return (
+                    <FinancingOfferCard
+                      key={offer.id}
+                      offer={offer}
+                      isCompatible={isCompatible}
+                      formatPrice={formatPrice}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="add-offer">
+            <div className="max-w-2xl mx-auto">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Plus className="w-5 h-5 text-primary" />
+                    إضافة عرض تمويلي جديد
+                  </CardTitle>
+                  <CardDescription>
+                    أضف عرض تمويلي من بنك أو شركة تمويل عقاري. سيتم مراجعة العرض قبل نشره.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {!user ? (
+                    <div className="text-center py-8">
+                      <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground mb-4">يجب تسجيل الدخول لإضافة عرض تمويلي</p>
+                      <Button onClick={() => navigate('/auth')}>تسجيل الدخول</Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>اسم الشركة / البنك *</Label>
+                          <Input
+                            placeholder="اسم جهة التمويل"
+                            value={newOffer.company_name}
+                            onChange={(e) => setNewOffer({ ...newOffer, company_name: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>نوع الجهة</Label>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant={newOffer.company_type === 'bank' ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setNewOffer({ ...newOffer, company_type: 'bank' })}
+                              className="flex-1"
+                            >
+                              <Landmark className="w-4 h-4 ml-1" />
+                              بنك
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={newOffer.company_type === 'financing_company' ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setNewOffer({ ...newOffer, company_type: 'financing_company' })}
+                              className="flex-1"
+                            >
+                              <BadgeDollarSign className="w-4 h-4 ml-1" />
+                              شركة تمويل
+                            </Button>
                           </div>
                         </div>
-                        {isCompatible && (
-                          <Badge className="bg-success">متوافق</Badge>
-                        )}
                       </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Percent className="w-4 h-4 text-muted-foreground" />
-                          <span>معدل الربح: {bank.rate}%</span>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>معدل الربح السنوي (%)</Label>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            value={newOffer.interest_rate}
+                            onChange={(e) => setNewOffer({ ...newOffer, interest_rate: Number(e.target.value) })}
+                          />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-muted-foreground" />
-                          <span>حتى {bank.maxTenure} سنة</span>
+                        <div className="space-y-2">
+                          <Label>أقصى مدة تمويل (سنوات)</Label>
+                          <Input
+                            type="number"
+                            value={newOffer.max_tenure}
+                            onChange={(e) => setNewOffer({ ...newOffer, max_tenure: Number(e.target.value) })}
+                          />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Banknote className="w-4 h-4 text-muted-foreground" />
-                          <span>حد أدنى: {formatPrice(bank.minSalary)} ر.س</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>أقصى مبلغ تمويل (ر.س)</Label>
+                          <Input
+                            type="number"
+                            value={newOffer.max_amount}
+                            onChange={(e) => setNewOffer({ ...newOffer, max_amount: Number(e.target.value) })}
+                          />
                         </div>
-                        <div className="flex items-center gap-2 col-span-2">
-                          <Building2 className="w-4 h-4 text-muted-foreground" />
-                          <span>تمويل يصل إلى {formatPrice(bank.maxAmount)} ر.س</span>
+                        <div className="space-y-2">
+                          <Label>الحد الأدنى للراتب (ر.س)</Label>
+                          <Input
+                            type="number"
+                            value={newOffer.min_salary}
+                            onChange={(e) => setNewOffer({ ...newOffer, min_salary: Number(e.target.value) })}
+                          />
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        {bank.features.map((feature) => (
-                          <div key={feature} className="flex items-center gap-2 text-sm">
-                            <CheckCircle className="w-4 h-4 text-success" />
-                            <span>{feature}</span>
+                        <Label>وصف العرض</Label>
+                        <Textarea
+                          placeholder="وصف مختصر للعرض التمويلي..."
+                          value={newOffer.description}
+                          onChange={(e) => setNewOffer({ ...newOffer, description: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label>رقم الهاتف</Label>
+                          <Input
+                            placeholder="920000000"
+                            value={newOffer.phone}
+                            onChange={(e) => setNewOffer({ ...newOffer, phone: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>البريد الإلكتروني</Label>
+                          <Input
+                            type="email"
+                            placeholder="info@example.com"
+                            value={newOffer.email}
+                            onChange={(e) => setNewOffer({ ...newOffer, email: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>الموقع الإلكتروني</Label>
+                          <Input
+                            placeholder="https://..."
+                            value={newOffer.website}
+                            onChange={(e) => setNewOffer({ ...newOffer, website: e.target.value })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>مميزات العرض</Label>
+                        {newOffer.features.map((feature, idx) => (
+                          <div key={idx} className="flex gap-2">
+                            <Input
+                              placeholder={`ميزة ${idx + 1}`}
+                              value={feature}
+                              onChange={(e) => {
+                                const newFeatures = [...newOffer.features];
+                                newFeatures[idx] = e.target.value;
+                                setNewOffer({ ...newOffer, features: newFeatures });
+                              }}
+                            />
+                            {idx === newOffer.features.length - 1 && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setNewOffer({ ...newOffer, features: [...newOffer.features, ""] })}
+                              >
+                                <Plus className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                         ))}
                       </div>
 
-                      <div className="flex gap-2">
-                        <Button className="flex-1" variant="outline" disabled={!isCompatible}>
-                          <FileText className="w-4 h-4 ml-2" />
-                          تفاصيل أكثر
-                        </Button>
-                        <Button className="flex-1" disabled={!isCompatible}>
-                          <Phone className="w-4 h-4 ml-2" />
-                          تواصل معنا
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                      <Button onClick={handleAddOffer} disabled={submitting} className="w-full">
+                        {submitting ? "جاري الإرسال..." : "إرسال العرض للمراجعة"}
+                      </Button>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
         </Tabs>

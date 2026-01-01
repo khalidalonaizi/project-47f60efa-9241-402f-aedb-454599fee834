@@ -43,6 +43,72 @@ export type Database = {
           },
         ]
       }
+      financing_offers: {
+        Row: {
+          company_name: string
+          company_type: string
+          created_at: string
+          description: string | null
+          email: string | null
+          features: string[] | null
+          id: string
+          interest_rate: number
+          is_approved: boolean | null
+          is_featured: boolean | null
+          logo_url: string | null
+          max_amount: number
+          max_dti: number
+          max_tenure: number
+          min_salary: number
+          phone: string | null
+          updated_at: string
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          company_name: string
+          company_type?: string
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          features?: string[] | null
+          id?: string
+          interest_rate: number
+          is_approved?: boolean | null
+          is_featured?: boolean | null
+          logo_url?: string | null
+          max_amount: number
+          max_dti?: number
+          max_tenure?: number
+          min_salary: number
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          company_name?: string
+          company_type?: string
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          features?: string[] | null
+          id?: string
+          interest_rate?: number
+          is_approved?: boolean | null
+          is_featured?: boolean | null
+          logo_url?: string | null
+          max_amount?: number
+          max_dti?: number
+          max_tenure?: number
+          min_salary?: number
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
