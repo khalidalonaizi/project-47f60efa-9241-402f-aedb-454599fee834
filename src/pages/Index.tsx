@@ -4,6 +4,7 @@ import FeaturedProperties from "@/components/FeaturedProperties";
 import CityGrid from "@/components/CityGrid";
 import StatsSection from "@/components/StatsSection";
 import ServicesSection from "@/components/ServicesSection";
+import HomeMapSection from "@/components/HomeMapSection";
 import Footer from "@/components/Footer";
 
 const Index = () => {
@@ -13,6 +14,7 @@ const Index = () => {
       <main>
         <HeroSection />
         <FeaturedProperties />
+        <HomeMapSection />
         <CityGrid />
         <StatsSection />
         <ServicesSection />
