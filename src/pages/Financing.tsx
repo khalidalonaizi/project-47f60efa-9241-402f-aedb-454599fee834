@@ -384,9 +384,20 @@ const Financing = () => {
     }
   };
 
+  // Sanitize function to prevent XSS
+  const sanitizeForHtml = (value: string | number): string => {
+    const str = String(value);
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
+
   // Print function
   const handlePrint = () => {
-    const currentDate = new Date().toLocaleDateString('ar-SA');
+    const currentDate = sanitizeForHtml(new Date().toLocaleDateString('ar-SA'));
     
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -398,7 +409,25 @@ const Financing = () => {
       return;
     }
 
-    const sectorLabel = sector === 'government' ? 'حكومي' : sector === 'private' ? 'خاص' : 'عسكري';
+    // Sanitize all values before using in HTML
+    const safeSectorLabel = sanitizeForHtml(sector === 'government' ? 'حكومي' : sector === 'private' ? 'خاص' : 'عسكري');
+    const safePropertyPrice = sanitizeForHtml(formatPrice(propertyPrice));
+    const safeDownPayment = sanitizeForHtml(formatPrice(downPayment));
+    const safeDownPaymentPercentage = sanitizeForHtml(downPaymentPercentage);
+    const safeLoanAmount = sanitizeForHtml(formatPrice(loanAmount));
+    const safeTenure = sanitizeForHtml(tenure);
+    const safeNumberOfPayments = sanitizeForHtml(numberOfPayments);
+    const safeInterestRate = sanitizeForHtml(interestRate);
+    const safeTotalInterest = sanitizeForHtml(formatPrice(totalInterest));
+    const safeMonthlyPayment = sanitizeForHtml(formatPrice(monthlyPayment));
+    const safeAge = sanitizeForHtml(age);
+    const safeSalary = sanitizeForHtml(formatPrice(salary));
+    const safeOtherIncome = sanitizeForHtml(formatPrice(otherIncome));
+    const safeTotalIncome = sanitizeForHtml(formatPrice(totalIncome));
+    const safeTotalObligationsWithLoan = sanitizeForHtml(formatPrice(totalObligationsWithLoan));
+    const safeDti = sanitizeForHtml(dti.toFixed(1));
+    const safeRemainingIncome = sanitizeForHtml(formatPrice(remainingIncome));
+    const safeEligibleCount = sanitizeForHtml(eligibleOffers.length);
     
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -473,7 +502,7 @@ const Financing = () => {
         </div>
 
         <div class="highlight">
-          <div class="highlight-value">${formatPrice(monthlyPayment)} ر.س</div>
+          <div class="highlight-value">${safeMonthlyPayment} ر.س</div>
           <div class="highlight-label">القسط الشهري المتوقع</div>
         </div>
 
@@ -482,27 +511,27 @@ const Financing = () => {
           <div class="grid">
             <div class="item">
               <span class="item-label">سعر العقار</span>
-              <span class="item-value">${formatPrice(propertyPrice)} ر.س</span>
+              <span class="item-value">${safePropertyPrice} ر.س</span>
             </div>
             <div class="item">
               <span class="item-label">الدفعة الأولى</span>
-              <span class="item-value">${formatPrice(downPayment)} ر.س (${downPaymentPercentage}%)</span>
+              <span class="item-value">${safeDownPayment} ر.س (${safeDownPaymentPercentage}%)</span>
             </div>
             <div class="item">
               <span class="item-label">مبلغ التمويل</span>
-              <span class="item-value">${formatPrice(loanAmount)} ر.س</span>
+              <span class="item-value">${safeLoanAmount} ر.س</span>
             </div>
             <div class="item">
               <span class="item-label">مدة التمويل</span>
-              <span class="item-value">${tenure} سنة (${numberOfPayments} شهر)</span>
+              <span class="item-value">${safeTenure} سنة (${safeNumberOfPayments} شهر)</span>
             </div>
             <div class="item">
               <span class="item-label">معدل الربح</span>
-              <span class="item-value">${interestRate}%</span>
+              <span class="item-value">${safeInterestRate}%</span>
             </div>
             <div class="item">
               <span class="item-label">إجمالي الأرباح</span>
-              <span class="item-value">${formatPrice(totalInterest)} ر.س</span>
+              <span class="item-value">${safeTotalInterest} ر.س</span>
             </div>
           </div>
         </div>
@@ -512,27 +541,27 @@ const Financing = () => {
           <div class="grid">
             <div class="item">
               <span class="item-label">العمر</span>
-              <span class="item-value">${age} سنة</span>
+              <span class="item-value">${safeAge} سنة</span>
             </div>
             <div class="item">
               <span class="item-label">قطاع العمل</span>
-              <span class="item-value">${sectorLabel}</span>
+              <span class="item-value">${safeSectorLabel}</span>
             </div>
             <div class="item">
               <span class="item-label">الراتب الشهري</span>
-              <span class="item-value">${formatPrice(salary)} ر.س</span>
+              <span class="item-value">${safeSalary} ر.س</span>
             </div>
             <div class="item">
               <span class="item-label">دخل إضافي</span>
-              <span class="item-value">${formatPrice(otherIncome)} ر.س</span>
+              <span class="item-value">${safeOtherIncome} ر.س</span>
             </div>
             <div class="item">
               <span class="item-label">إجمالي الدخل</span>
-              <span class="item-value">${formatPrice(totalIncome)} ر.س</span>
+              <span class="item-value">${safeTotalIncome} ر.س</span>
             </div>
             <div class="item">
               <span class="item-label">إجمالي الالتزامات</span>
-              <span class="item-value">${formatPrice(totalObligationsWithLoan)} ر.س</span>
+              <span class="item-value">${safeTotalObligationsWithLoan} ر.س</span>
             </div>
           </div>
         </div>
@@ -542,11 +571,11 @@ const Financing = () => {
           <div class="grid">
             <div class="item">
               <span class="item-label">نسبة الاستقطاع (DTI)</span>
-              <span class="item-value" style="color: ${dti > 65 ? '#ef4444' : '#22c55e'};">${dti.toFixed(1)}%</span>
+              <span class="item-value" style="color: ${dti > 65 ? '#ef4444' : '#22c55e'};">${safeDti}%</span>
             </div>
             <div class="item">
               <span class="item-label">الدخل المتبقي</span>
-              <span class="item-value" style="color: ${remainingIncome >= 2000 ? '#22c55e' : '#ef4444'};">${formatPrice(remainingIncome)} ر.س</span>
+              <span class="item-value" style="color: ${remainingIncome >= 2000 ? '#22c55e' : '#ef4444'};">${safeRemainingIncome} ر.س</span>
             </div>
           </div>
         </div>
@@ -554,7 +583,7 @@ const Financing = () => {
         <div class="eligibility ${isEligible ? 'eligible' : 'not-eligible'}">
           <strong style="font-size: 18px;">${isEligible ? '✓ مؤهل للتمويل' : '✗ غير مؤهل حالياً'}</strong>
           <p style="margin-top: 10px; color: #6b7280;">
-            ${isEligible ? 'متوافق مع ' + eligibleOffers.length + ' جهة تمويل' : 'يرجى مراجعة المتطلبات'}
+            ${isEligible ? 'متوافق مع ' + safeEligibleCount + ' جهة تمويل' : 'يرجى مراجعة المتطلبات'}
           </p>
         </div>
 
