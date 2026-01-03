@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { Building2, Heart, Menu, Phone, User, X, LogOut, Shield, Plus, List } from "lucide-react";
+import { Building2, Heart, Menu, Phone, User, X, LogOut, Shield, Plus, List, MessageSquare, Bell } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +18,21 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
+
+  // عدد الرسائل غير المقروءة
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["unread-messages", user?.id],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("messages")
+        .select("*", { count: "exact", head: true })
+        .eq("receiver_id", user!.id)
+        .eq("is_read", false);
+      return count || 0;
+    },
+    enabled: !!user,
+    refetchInterval: 30000,
+  });
 
   const navLinks = [
     { label: "للبيع", href: "/search?type=sale" },
@@ -91,6 +109,25 @@ const Header = () => {
                     <Link to="/add-property" className="flex items-center gap-2 cursor-pointer">
                       <Plus className="w-4 h-4" />
                       إضافة إعلان
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/messages" className="flex items-center justify-between cursor-pointer">
+                      <span className="flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4" />
+                        الرسائل
+                      </span>
+                      {unreadCount > 0 && (
+                        <Badge variant="destructive" className="text-xs h-5 min-w-5 flex items-center justify-center">
+                          {unreadCount}
+                        </Badge>
+                      )}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/price-alerts" className="flex items-center gap-2 cursor-pointer">
+                      <Bell className="w-4 h-4" />
+                      تنبيهات الأسعار
                     </Link>
                   </DropdownMenuItem>
                   {isAdmin && (

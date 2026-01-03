@@ -8,6 +8,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import PropertyReviews from '@/components/PropertyReviews';
+import SendMessageDialog from '@/components/SendMessageDialog';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -22,7 +24,8 @@ import {
   User,
   Calendar,
   Home,
-  Check
+  Check,
+  Star
 } from 'lucide-react';
 
 interface Property {
@@ -361,6 +364,17 @@ const PropertyDetails = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* التقييمات والمراجعات */}
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <Star className="h-5 w-5 text-yellow-400" />
+                  التقييمات والمراجعات
+                </h3>
+                <PropertyReviews propertyId={property.id} />
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar */}
@@ -402,6 +416,13 @@ const PropertyDetails = () => {
                       واتساب
                     </a>
                   </Button>
+
+                  {/* زر مراسلة المالك */}
+                  <SendMessageDialog
+                    receiverId={property.user_id}
+                    propertyId={property.id}
+                    propertyTitle={property.title}
+                  />
                 </div>
 
                 <div className="mt-6 pt-6 border-t border-border">
