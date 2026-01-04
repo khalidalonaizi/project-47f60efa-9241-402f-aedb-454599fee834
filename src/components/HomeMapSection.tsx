@@ -116,9 +116,21 @@ const HomeMapSection = () => {
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=ar`;
     script.async = true;
     script.defer = true;
-    script.onload = () => setMapLoaded(true);
+    script.onload = () => {
+      // Check for billing errors after script loads
+      if (window.google && window.google.maps) {
+        setMapLoaded(true);
+      }
+    };
     script.onerror = () => setError('فشل في تحميل خرائط Google');
     document.head.appendChild(script);
+    
+    // Listen for Google Maps API errors
+    window.addEventListener('error', (e) => {
+      if (e.message?.includes('BillingNotEnabled') || e.message?.includes('billing')) {
+        setError('يرجى تفعيل الفوترة في Google Cloud Console لاستخدام الخرائط');
+      }
+    });
   }, [apiKey, mapLoaded]);
 
   // Initialize map and markers
