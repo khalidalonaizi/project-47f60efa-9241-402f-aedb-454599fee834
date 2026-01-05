@@ -1,6 +1,7 @@
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import FeaturedProperties from "@/components/FeaturedProperties";
+import FeaturedAds from "@/components/FeaturedAds";
 import CityGrid from "@/components/CityGrid";
 import StatsSection from "@/components/StatsSection";
 import ServicesSection from "@/components/ServicesSection";
@@ -13,6 +14,7 @@ const Index = () => {
       <Header />
       <main>
         <HeroSection />
+        <FeaturedAds />
         <FeaturedProperties />
         <HomeMapSection />
         <CityGrid />

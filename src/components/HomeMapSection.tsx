@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, Home, Loader2, Search, Building2, Eye } from "lucide-react";
+import { MapPin, Home, Loader2, Search, Building2, Eye, Filter, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -32,6 +33,27 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
+const cities = [
+  { value: "all", label: "جميع المدن" },
+  { value: "الرياض", label: "الرياض" },
+  { value: "جدة", label: "جدة" },
+  { value: "الدمام", label: "الدمام" },
+  { value: "مكة المكرمة", label: "مكة المكرمة" },
+  { value: "المدينة المنورة", label: "المدينة المنورة" },
+  { value: "الخبر", label: "الخبر" },
+  { value: "الطائف", label: "الطائف" },
+];
+
+const propertyTypes = [
+  { value: "all", label: "جميع الأنواع" },
+  { value: "apartment", label: "شقة" },
+  { value: "villa", label: "فيلا" },
+  { value: "land", label: "أرض" },
+  { value: "building", label: "عمارة" },
+  { value: "office", label: "مكتب" },
+  { value: "shop", label: "محل تجاري" },
+];
+
 const HomeMapSection = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
@@ -40,6 +62,9 @@ const HomeMapSection = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [selectedCity, setSelectedCity] = useState("all");
+  const [selectedType, setSelectedType] = useState("all");
+  const [selectedListing, setSelectedListing] = useState("all");
   const navigate = useNavigate();
 
   const formatPrice = (price: number) => {
@@ -73,7 +98,7 @@ const HomeMapSection = () => {
         .eq('is_approved', true)
         .not('latitude', 'is', null)
         .not('longitude', 'is', null)
-        .limit(50);
+        .limit(100);
 
       if (!error && data) {
         setProperties(data);
@@ -82,6 +107,14 @@ const HomeMapSection = () => {
     };
     fetchProperties();
   }, []);
+
+  // Filter properties based on selections
+  const filteredProperties = properties.filter(property => {
+    if (selectedCity !== "all" && property.city !== selectedCity) return false;
+    if (selectedType !== "all" && property.property_type !== selectedType) return false;
+    if (selectedListing !== "all" && property.listing_type !== selectedListing) return false;
+    return true;
+  });
 
   // Initialize map
   useEffect(() => {
@@ -108,7 +141,7 @@ const HomeMapSection = () => {
     };
   }, []);
 
-  // Add markers when properties are loaded
+  // Add markers when properties are loaded or filters change
   useEffect(() => {
     if (!mapInstance.current || loading) return;
 
@@ -116,8 +149,8 @@ const HomeMapSection = () => {
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
 
-    // Add markers for each property
-    properties.forEach(property => {
+    // Add markers for each filtered property
+    filteredProperties.forEach(property => {
       if (!property.latitude || !property.longitude) return;
 
       const marker = L.marker([property.latitude, property.longitude], {
@@ -148,15 +181,23 @@ const HomeMapSection = () => {
     });
 
     // Fit bounds to show all markers
-    if (properties.length > 0) {
+    if (filteredProperties.length > 0) {
       const bounds = L.latLngBounds(
-        properties
+        filteredProperties
           .filter(p => p.latitude && p.longitude)
           .map(p => [p.latitude!, p.longitude!] as [number, number])
       );
       mapInstance.current.fitBounds(bounds, { padding: [50, 50] });
     }
-  }, [properties, loading]);
+  }, [filteredProperties, loading]);
+
+  const resetFilters = () => {
+    setSelectedCity("all");
+    setSelectedType("all");
+    setSelectedListing("all");
+  };
+
+  const hasActiveFilters = selectedCity !== "all" || selectedType !== "all" || selectedListing !== "all";
 
   return (
     <section className="py-16 bg-muted/30">
@@ -171,6 +212,62 @@ const HomeMapSection = () => {
             تصفح العقارات المتاحة في جميع أنحاء المملكة العربية السعودية بطريقة تفاعلية
           </p>
         </div>
+
+        {/* Filters */}
+        <Card className="mb-4">
+          <CardContent className="p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Filter className="w-4 h-4" />
+                <span>فلترة:</span>
+              </div>
+              
+              <Select value={selectedCity} onValueChange={setSelectedCity}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="المدينة" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cities.map(city => (
+                    <SelectItem key={city.value} value={city.value}>{city.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedType} onValueChange={setSelectedType}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="نوع العقار" />
+                </SelectTrigger>
+                <SelectContent>
+                  {propertyTypes.map(type => (
+                    <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedListing} onValueChange={setSelectedListing}>
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder="نوع الإعلان" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">الكل</SelectItem>
+                  <SelectItem value="sale">للبيع</SelectItem>
+                  <SelectItem value="rent">للإيجار</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={resetFilters}>
+                  <X className="w-4 h-4 ml-1" />
+                  مسح الفلاتر
+                </Button>
+              )}
+
+              <div className="mr-auto text-sm text-muted-foreground">
+                عدد النتائج: <span className="font-bold text-foreground">{filteredProperties.length}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="overflow-hidden">
           <div className="relative h-[500px]">
@@ -200,7 +297,7 @@ const HomeMapSection = () => {
                 <div className="absolute top-4 left-4 bg-card rounded-lg shadow-lg p-3 z-[1000]">
                   <div className="flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-primary" />
-                    <span className="font-bold">{properties.length}</span>
+                    <span className="font-bold">{filteredProperties.length}</span>
                     <span className="text-muted-foreground text-sm">عقار</span>
                   </div>
                 </div>
@@ -238,11 +335,16 @@ const HomeMapSection = () => {
                 )}
 
                 {/* No properties message */}
-                {properties.length === 0 && !loading && (
+                {filteredProperties.length === 0 && !loading && (
                   <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-[1000]">
                     <div className="text-center">
                       <Home className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-muted-foreground">لا توجد عقارات مع إحداثيات الموقع</p>
+                      <p className="text-muted-foreground">لا توجد عقارات مطابقة للفلاتر المحددة</p>
+                      {hasActiveFilters && (
+                        <Button variant="outline" size="sm" onClick={resetFilters} className="mt-3">
+                          مسح الفلاتر
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )}
