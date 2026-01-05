@@ -10,6 +10,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import PropertyReviews from '@/components/PropertyReviews';
 import SendMessageDialog from '@/components/SendMessageDialog';
+import PropertyLocationMap from '@/components/PropertyLocationMap';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -350,16 +351,41 @@ const PropertyDetails = () => {
               </CardContent>
             </Card>
 
-            {/* Map Placeholder */}
+            {/* Interactive Map */}
             <Card>
               <CardContent className="p-6">
-                <h3 className="font-bold text-lg mb-4">الموقع</h3>
-                <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                  <div className="text-center text-muted-foreground">
-                    <MapPin className="h-12 w-12 mx-auto mb-2" />
-                    <p>{property.city}</p>
-                    {property.neighborhood && <p className="text-sm">{property.neighborhood}</p>}
-                    {property.address && <p className="text-sm">{property.address}</p>}
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  الموقع على الخريطة
+                </h3>
+                <div className="aspect-video rounded-lg overflow-hidden">
+                  {property.latitude && property.longitude ? (
+                    <PropertyLocationMap
+                      latitude={property.latitude}
+                      longitude={property.longitude}
+                      title={property.title}
+                      address={property.address || `${property.city}${property.neighborhood ? ' - ' + property.neighborhood : ''}`}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-muted flex items-center justify-center">
+                      <div className="text-center text-muted-foreground">
+                        <MapPin className="h-12 w-12 mx-auto mb-2" />
+                        <p>{property.city}</p>
+                        {property.neighborhood && <p className="text-sm">{property.neighborhood}</p>}
+                        {property.address && <p className="text-sm">{property.address}</p>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {/* Address info below map */}
+                <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 text-primary mt-0.5" />
+                    <div>
+                      <p className="font-medium">{property.city}</p>
+                      {property.neighborhood && <p className="text-sm text-muted-foreground">{property.neighborhood}</p>}
+                      {property.address && <p className="text-sm text-muted-foreground">{property.address}</p>}
+                    </div>
                   </div>
                 </div>
               </CardContent>
